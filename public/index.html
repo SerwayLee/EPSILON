@@ -10,8 +10,8 @@
     }
 
     html, body {
-      font-family: Arial, sans-serif;
-      background-color: #f0f4f8;
+      font-family: 'Helvetica Neue', sans-serif;
+      background-color: #e0e7ef;
       color: #333;
       margin: 0;
       padding: 0;
@@ -23,58 +23,67 @@
     }
 
     h1 {
-      color: #0066cc;
-      font-size: 6vw;
+      color: #3a7bd5;
+      font-size: 5vw;
+      font-weight: 700;
       text-align: center;
       margin-bottom: 1vh;
     }
 
     .container {
       background-color: #ffffff;
-      padding: 2vh 2vw;
+      padding: 3vh 3vw;
       border-radius: 1vw;
-      box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
-      width: 90vw;
-      max-width: 800px; /* 최대 폭 제한 */
+      box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.15);
+      width: 85vw;
+      max-width: 700px;
       height: 90vh;
-      text-align: center;
       overflow-y: auto;
     }
 
     input[type="text"] {
       width: 100%;
-      padding: 1.5vh 1vw;
-      margin: 1vh 0;
-      border: 1px solid #cccccc;
-      border-radius: 0.5vw;
-      font-size: 3vw;
+      padding: 1.2vh 1vw;
+      margin: 1.5vh 0;
+      border: 1px solid #b0b8c1;
+      border-radius: 1vw;
+      font-size: 1.8vw;
+      outline: none;
+      transition: border 0.3s;
+    }
+
+    input[type="text"]:focus {
+      border: 1px solid #3a7bd5;
     }
 
     button {
       width: 100%;
-      padding: 1.5vh;
-      background-color: #0066cc;
+      padding: 1.4vh;
+      background-color: #3a7bd5;
       color: #ffffff;
       border: none;
-      border-radius: 0.5vw;
-      font-size: 3vw;
+      border-radius: 1vw;
+      font-size: 1.8vw;
+      font-weight: 600;
       cursor: pointer;
-      margin: 1vh 0;
+      margin: 1.5vh 0;
+      transition: background-color 0.3s;
     }
 
     button:hover {
-      background-color: #005bb5;
+      background-color: #2a6bb8;
     }
 
     #chatLog, #playerList, #visibleCharacters {
       max-height: 20vh;
       overflow-y: auto;
-      background-color: #f9f9f9;
-      padding: 1vh;
-      border-radius: 0.5vw;
+      background-color: #f4f7fa;
+      padding: 1.2vh;
+      border-radius: 1vw;
       border: 1px solid #e0e0e0;
+      font-size: 1.6vw;
       text-align: left;
-      font-size: 2.5vw;
+      margin-top: 1.5vh;
     }
 
     #waitingRoom, #gameArea {
@@ -83,11 +92,10 @@
 
     #displayRoomId {
       font-weight: bold;
-      color: #333;
-      font-size: 3vw;
+      color: #3a7bd5;
+      font-size: 2.5vw;
     }
   </style>
-
 </head>
 <body>
   <div class="container">
@@ -121,14 +129,14 @@
       <button id="attemptAnswer">정답 제출</button>
       <button id="passTurn">턴 넘기기(본인 턴에만 가능)</button>
     </div>
-    <p>Serway(rarenick) 2024 EPSILON</p>
+    <audio id="alertSound" src="ding.wav"></audio>
   </div>
-
 
   <script>
     let playerId, roomId, isRoomCreator = false;
     let statusInterval;
-    let last=""
+    let lastMessageCount = 0;
+
     async function updateRoomStatus() {
       try {
         const response = await fetch(`/roomStatus?roomId=${roomId}&playerId=${playerId}`);
@@ -158,6 +166,11 @@
           p.textContent = `${msg.nickname}: ${msg.content}`;
           chatLog.appendChild(p);
         });
+        var audio = new Audio('ding.wav');
+        if (data.messages.length > lastMessageCount) {
+          audio.play();
+          lastMessageCount = data.messages.length;
+        }
 
         const visibleCharacters = document.getElementById('visibleCharacters');
         visibleCharacters.innerHTML = '';
@@ -170,20 +183,7 @@
         document.getElementById('currentTurn').textContent = `현재 턴: ${data.currentTurn || '알 수 없음'}`;
         const currentTurnPlayer = (data.players || [])[data.currentTurnIndex];
         document.getElementById('askQuestion').disabled = !(currentTurnPlayer && currentTurnPlayer.id === playerId);
-        if (last !== data.currentTurn && last !== ""){  {
-          last = data.currentTurn
-          if (data.gameStarted){
-            try{alert(`턴이 넘어갔습니다. 확인해주세요.`);}
-            catch(e){}
 
-          }
-          console.log(data.gameStarted);
-          
-        }
-        console.log('last:',last);
-
-
-      }
         if (data.gameStarted && document.getElementById('waitingRoom').style.display !== 'none') {
           startGame(data.visiblePlayers);
         }
@@ -191,7 +191,6 @@
         console.error("Error in updateRoomStatus:", error);
       }
     }
-  
 
     document.getElementById('createRoom').onclick = async () => {
       const nickname = document.getElementById('nickname').value;
@@ -231,10 +230,8 @@
 
       if (data.gameStarted) {
         startGame(data.visiblePlayers);
-        
       } else {
         statusInterval = setInterval(updateRoomStatus, 1000);
-        
       }
     }
 
@@ -305,12 +302,11 @@
     };
 
     document.getElementById('passTurn').onclick = async () => {
-      const response = await fetch('/passTurn', {
+      await fetch('/passTurn', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ roomId, playerId }),
       });
-      const data = await response.json();
     };
 
     statusInterval = setInterval(updateRoomStatus, 1000);
