@@ -8,16 +8,17 @@
       box-sizing: border-box;
     }
 
-    body {
+    html, body {
       font-family: Arial, sans-serif;
       background-color: #f0f4f8;
       color: #333;
       margin: 0;
       padding: 0;
+      width: 100%;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 100vh;
     }
 
     h1 {
@@ -32,9 +33,11 @@
       padding: 20px;
       border-radius: 10px;
       box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
-      width: 350px;
-      max-width: 100%;
+      width: 100%;
+      max-width: 800px; /* 데스크탑 기준 최대 너비 */
       text-align: center;
+      height: 90vh; /* 화면 높이의 90% */
+      overflow-y: auto;
     }
 
     input[type="text"] {
@@ -90,6 +93,61 @@
       font-weight: bold;
       color: #333;
       font-size: 1.2em;
+    }
+
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 1.5em;
+      }
+      .container {
+        padding: 15px;
+        width: 100%;
+        height: 95vh;
+      }
+      input[type="text"], button {
+        font-size: 0.9em;
+      }
+      #chatLog, #playerList, #visibleCharacters {
+        max-height: 100px;
+        font-size: 0.8em;
+      }
+    }
+
+    @media (min-width: 600px) and (max-width: 900px) {
+      h1 {
+        font-size: 1.8em;
+      }
+      .container {
+        padding: 20px;
+        width: 90%;
+        height: 90vh;
+      }
+      input[type="text"], button {
+        font-size: 1em;
+      }
+      #chatLog, #playerList, #visibleCharacters {
+        max-height: 120px;
+        font-size: 0.85em;
+      }
+    }
+
+    @media (min-width: 900px) {
+      h1 {
+        font-size: 2em;
+      }
+      .container {
+        padding: 20px;
+        width: 80%;
+        max-width: 800px;
+        height: 90vh;
+      }
+      input[type="text"], button {
+        font-size: 1em;
+      }
+      #chatLog, #playerList, #visibleCharacters {
+        max-height: 150px;
+        font-size: 0.9em;
+      }
     }
   </style>
 </head>
