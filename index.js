@@ -153,20 +153,7 @@ app.post('/passTurn', (req, res) => {
       room.messages.push({ nickname: "System", content: `턴이 ${nextTurnPlayer.nickname}님에게로 넘어갔습니다.` });
   
       res.json({ turnPassed: true, nextTurn: nextTurnPlayer.nickname });
-    } else {
-      room.passVotes += 1;
-      if (room.passVotes >= room.players.length - 1) {
-        room.currentTurnIndex = (room.currentTurnIndex + 1) % room.players.length;
-        room.passVotes = 0;
-        const nextTurnPlayer = room.players[room.currentTurnIndex];
-        
-        room.messages.push({ nickname: "System", content: `턴이 ${nextTurnPlayer.nickname}님에게로 넘어갔습니다.` });
-        
-        res.json({ turnPassed: true, nextTurn: nextTurnPlayer.nickname });
-      } else {
-        res.json({ turnPassed: false });
-      }
-    }
+    } 
   });
   
 
