@@ -128,68 +128,69 @@
     let playerId, roomId, isRoomCreator = false;
     let statusInterval;
     let last=""
-    async function updateRoomStatus() {
-      try {
-        const response = await fetch(`/roomStatus?roomId=${roomId}&playerId=${playerId}`);
-        const data = await response.json();
+async function updateRoomStatus() {
+  try {
+    const response = await fetch(`/roomStatus?roomId=${roomId}&playerId=${playerId}`);
+    const data = await response.json();
 
-        if (data.winner) {
-          alert(`${data.winner.nickname}님이 승리하셨습니다!`);
-          clearInterval(statusInterval);
-          setTimeout(() => {
-            window.location.reload();
-          }, 3000);
-          return;
-        }
+    if (data.winner) {
+      alert(`${data.winner.nickname}님이 승리하셨습니다!`);
+      clearInterval(statusInterval);
+      setTimeout(() => {
+        window.location.reload();
+      }, 3000);
+      return;
+    }
 
-        const playerList = document.getElementById('playerList');
-        playerList.innerHTML = '';
-        (data.players || []).forEach(player => {
-          const li = document.createElement('li');
-          li.textContent = player.nickname;
-          playerList.appendChild(li);
-        });
+    const playerList = document.getElementById('playerList');
+    playerList.innerHTML = '';
+    (data.players || []).forEach(player => {
+      const li = document.createElement('li');
+      li.textContent = player.nickname;
+      playerList.appendChild(li);
+    });
 
-        const chatLog = document.getElementById('chatLog');
-        chatLog.innerHTML = '';
-        (data.messages || []).forEach(msg => {
-          const p = document.createElement('p');
-          p.textContent = `${msg.nickname}: ${msg.content}`;
-          chatLog.appendChild(p);
-        });
+    const chatLog = document.getElementById('chatLog');
+    chatLog.innerHTML = '';
+    (data.messages || []).forEach(msg => {
+      const p = document.createElement('p');
+      p.textContent = `${msg.nickname}: ${msg.content}`;
+      chatLog.appendChild(p);
+    });
 
-        const visibleCharacters = document.getElementById('visibleCharacters');
-        visibleCharacters.innerHTML = '';
-        (data.visiblePlayers || []).forEach(player => {
-          const li = document.createElement('li');
-          li.textContent = `${player.nickname}: ${player.person}`;
-          visibleCharacters.appendChild(li);
-        });
+    const visibleCharacters = document.getElementById('visibleCharacters');
+    visibleCharacters.innerHTML = '';
+    (data.visiblePlayers || []).forEach(player => {
+      const li = document.createElement('li');
+      li.textContent = `${player.nickname}: ${player.person}`;
+      visibleCharacters.appendChild(li);
+    });
 
-        document.getElementById('currentTurn').textContent = `현재 턴: ${data.currentTurn || '알 수 없음'}`;
-        const currentTurnPlayer = (data.players || [])[data.currentTurnIndex];
-        document.getElementById('askQuestion').disabled = !(currentTurnPlayer && currentTurnPlayer.id === playerId);
-        if (last !== data.currentTurn && last !== ""){  {
-          last = data.currentTurn
-          if (data.gameStarted){
-            try{alert(`턴이 넘어갔습니다. 확인해주세요.`);}
-            catch(e){}
+    document.getElementById('currentTurn').textContent = `현재 턴: ${data.currentTurn || '알 수 없음'}`;
+    
+    // Check if it's the player's turn and enable/disable buttons accordingly
+    const isPlayerTurn = (data.players || []).some(player => player.id === playerId && data.currentTurn === player.nickname);
+    document.getElementById('askQuestion').disabled = !isPlayerTurn;
+    document.getElementById('passTurn').disabled = !isPlayerTurn; // Disable passTurn button when it's not player's turn
 
-          }
-          console.log(data.gameStarted);
-          
-        }
-        console.log('last:',last);
-
-
-      }
-        if (data.gameStarted && document.getElementById('waitingRoom').style.display !== 'none') {
-          startGame(data.visiblePlayers);
-        }
-      } catch (error) {
-        console.error("Error in updateRoomStatus:", error);
+    // Trigger turn change notification
+    if (last !== data.currentTurn && last !== "") {
+      last = data.currentTurn;
+      if (data.gameStarted) {
+        try {
+          alert(`턴이 넘어갔습니다. 확인해주세요.`);
+        } catch (e) {}
       }
     }
+    
+    if (data.gameStarted && document.getElementById('waitingRoom').style.display !== 'none') {
+      startGame(data.visiblePlayers);
+    }
+  } catch (error) {
+    console.error("Error in updateRoomStatus:", error);
+  }
+}
+
   
 
     document.getElementById('createRoom').onclick = async () => {
