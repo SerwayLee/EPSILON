@@ -41,6 +41,15 @@ function generateRoomId() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
+function cleanupRoom(roomId) {
+  if (rooms[roomId]) {
+    rooms[roomId].players.forEach(player => {
+      usedNames.delete(player.person);
+    });
+    delete rooms[roomId]; 
+  }
+}
+
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
 });
@@ -126,6 +135,11 @@ app.post('/sendAnswer', (req, res) => {
 app.post('/attemptAnswer', (req, res) => {
   const { roomId, playerId, guess } = req.body;
   const room = rooms[roomId];
+
+  if (!room) { 
+    return res.status(404).json({ error: 'Room not found' });
+  }
+
   const player = room.players.find((p) => p.id === playerId);
 
   if (!player) return res.status(404).json({ error: 'Player not found' });
@@ -133,11 +147,13 @@ app.post('/attemptAnswer', (req, res) => {
   room.messages.push({ nickname: player.nickname, content: guess, type: 'guess' });
 
   if (guess === player.person) {
-    room.winner = player; 
-    res.json({ winner: playerId, message: `${player.nickname}님이 승리하셨습니다!` });
+    room.winner = player;
+    res.json({ winner: playerId, winnerNickname: player.nickname, message: `${player.nickname}님이 승리하셨습니다!` });
   } else {
     res.json({ incorrect: true, message: `${player.nickname}: 틀린 추측 - ${guess}` });
   }
+  sleep(1000);
+  cleanupRoom(roomId);
 });
 
 app.post('/passTurn', (req, res) => {
