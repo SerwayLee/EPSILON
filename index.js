@@ -73,7 +73,7 @@ app.post('/joinRoom', (req, res) => {
   const room = rooms[roomId];
   if (!room) return res.status(404).json({ error: 'Room not found' });
 
-  if (room.players.length > 5) {
+  if (room.players.length > 49) {
     return res.status(403).json({ error: 'Room is full' });
   }
 
