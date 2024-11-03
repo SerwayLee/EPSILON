@@ -102,8 +102,8 @@
     <h1>양세찬 게임</h1>
     <div id="setup">
       <input type="text" id="nickname" placeholder="닉네임 입력" />
-      <button id="createRoom">방 만들기</button>
-      <button id="joinRoom">방 입장</button>
+      <button id="createRoom" disabled>방 만들기</button>
+      <button id="joinRoom" disabled>방 입장</button>
       <input type="text" id="roomId" placeholder="방 아이디 입력" />
     </div>
 
@@ -166,10 +166,12 @@
           p.textContent = `${msg.nickname}: ${msg.content}`;
           chatLog.appendChild(p);
         });
-        var audio = new Audio('ding.wav');
+
         if (data.messages.length > lastMessageCount) {
+          const audio = new Audio('ding.wav');
           audio.play();
           lastMessageCount = data.messages.length;
+          chatLog.scrollTop = chatLog.scrollHeight;
         }
 
         const visibleCharacters = document.getElementById('visibleCharacters');
@@ -192,8 +194,16 @@
       }
     }
 
+    document.getElementById('nickname').addEventListener('input', () => {
+      const nickname = document.getElementById('nickname').value.trim();
+      const buttonsEnabled = nickname.length > 0;
+      document.getElementById('createRoom').disabled = !buttonsEnabled;
+      document.getElementById('joinRoom').disabled = !buttonsEnabled;
+    });
+
     document.getElementById('createRoom').onclick = async () => {
       const nickname = document.getElementById('nickname').value;
+      if (!nickname.trim()) return;
       const response = await fetch('/createRoom', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -207,6 +217,7 @@
 
     document.getElementById('joinRoom').onclick = async () => {
       const nickname = document.getElementById('nickname').value;
+      if (!nickname.trim()) return;
       roomId = document.getElementById('roomId').value;
       document.getElementById('displayRoomId').textContent = roomId;
       await joinRoom(roomId, nickname);
@@ -292,14 +303,16 @@
       });
       const data = await response.json();
       document.getElementById('guessInput').value = '';
-
+    
       if (data.winner) {
-        alert(data.message);
-        window.location.reload();
+        alert(`${data.winnerNickname}님이 승리하셨습니다!`);
+        console.log("Winner found, reloading page.");
+        window.location.reload(true); 
       } else if (data.incorrect) {
         alert(data.message);
       }
     };
+    
 
     document.getElementById('passTurn').onclick = async () => {
       await fetch('/passTurn', {
