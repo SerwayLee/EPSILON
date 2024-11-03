@@ -169,7 +169,7 @@ async function updateRoomStatus() {
     document.getElementById('currentTurn').textContent = `현재 턴: ${data.currentTurn || '알 수 없음'}`;
     
     // Check if it's the player's turn and enable/disable buttons accordingly
-    const isPlayerTurn = (data.players || []).some(player => player.id === playerId && data.currentTurn === player.nickname);
+    const isPlayerTurn = (data.currentTurn.id == player.nickname);
     document.getElementById('askQuestion').disabled = !isPlayerTurn;
     document.getElementById('passTurn').disabled = !isPlayerTurn; // Disable passTurn button when it's not player's turn
 
