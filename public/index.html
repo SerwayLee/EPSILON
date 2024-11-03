@@ -263,13 +263,6 @@
       document.getElementById('waitingRoom').style.display = 'none';
       document.getElementById('gameArea').style.display = 'block';
 
-      const visibleCharacters = document.getElementById('visibleCharacters');
-      visibleCharacters.innerHTML = '';
-      visiblePlayers.forEach(player => {
-        const li = document.createElement('li');
-        li.textContent = `${player.nickname}: ${player.person}`;
-        visibleCharacters.appendChild(li);
-      });
 
       updateRoomStatus();
     }
