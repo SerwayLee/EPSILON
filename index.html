@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>api</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      font-family: 'Helvetica Neue', sans-serif;
+      background-color: #e0e7ef;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    h1 {
+      color: #3a7bd5;
+      font-size: 5vw;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 1vh;
+    }
+
+    .container {
+      background-color: #ffffff;
+      padding: 3vh 3vw;
+      border-radius: 1vw;
+      box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.15);
+      width: 85vw;
+      max-width: 700px;
+      height: 90vh;
+      overflow-y: auto;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 1.2vh 1vw;
+      margin: 1.5vh 0;
+      border: 1px solid #b0b8c1;
+      border-radius: 1vw;
+      font-size: 1.8vw;
+      outline: none;
+      transition: border 0.3s;
+    }
+
+    input[type="text"]:focus {
+      border: 1px solid #3a7bd5;
+    }
+
+    button {
+      width: 100%;
+      padding: 1.4vh;
+      background-color: #3a7bd5;
+      color: #ffffff;
+      border: none;
+      border-radius: 1vw;
+      font-size: 1.8vw;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 1.5vh 0;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #2a6bb8;
+    }
+
+    #chatLog, #playerList, #visibleCharacters {
+      max-height: 20vh;
+      overflow-y: auto;
+      background-color: #f4f7fa;
+      padding: 1.2vh;
+      border-radius: 1vw;
+      border: 1px solid #e0e0e0;
+      font-size: 1.6vw;
+      text-align: left;
+      margin-top: 1.5vh;
+    }
+
+    #waitingRoom, #gameArea {
+      display: none;
+    }
+
+    #displayRoomId {
+      font-weight: bold;
+      color: #3a7bd5;
+      font-size: 2.5vw;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>양세찬 게임</h1>
+    <div id="setup">
+      <input type="text" id="nickname" placeholder="닉네임 입력" />
+      <button id="createRoom" disabled>방 만들기</button>
+      <button id="joinRoom" disabled>방 입장</button>
+      <input type="text" id="roomId" placeholder="방 아이디 입력" />
+    </div>
+
+    <div id="waitingRoom">
+      <h2>대기실</h2>
+      <p>방 아이디: <span id="displayRoomId"></span></p>
+      <p>현재 플레이어:</p>
+      <ul id="playerList"></ul>
+      <button id="startGame">게임 시작</button>
+    </div>
+
+    <div id="gameArea">
+      <h2>게임 진행 중</h2>
+      <p>다른 플레이어들의 제시어:</p>
+      <ul id="visibleCharacters"></ul>
+      <p id="currentTurn"></p>
+      <div id="chatLog"></div>
+      <input type="text" id="questionInput" placeholder="질문을 입력하세요(본인 턴에만 질문 가능)" />
+      <button id="askQuestion">질문하기</button>
+      <input type="text" id="answerInput" placeholder="답변을 입력하세요" />
+      <button id="sendAnswer">답변하기</button>
+      <input type="text" id="guessInput" placeholder="정답을 추측하세요" />
+      <button id="attemptAnswer">정답 제출</button>
+      <button id="passTurn">턴 넘기기(본인 턴에만 가능)</button>
+    </div>
+    <audio id="alertSound" src="ding.wav"></audio>
+  </div>
+
+  <script>
+    let playerId, roomId, isRoomCreator = false;
+    let statusInterval;
+    let lastMessageCount = 0;
+
+    async function updateRoomStatus() {
+      try {
+        const response = await fetch(`/roomStatus?roomId=${roomId}&playerId=${playerId}`);
+        const data = await response.json();
+
+        if (data.winner) {
+          alert(`${data.winner.nickname}님이 승리하셨습니다!`);
+          clearInterval(statusInterval);
+          setTimeout(() => {
+            window.location.reload();
+          }, 3000);
+          return;
+        }
+
+        const playerList = document.getElementById('playerList');
+        playerList.innerHTML = '';
+        (data.players || []).forEach(player => {
+          const li = document.createElement('li');
+          li.textContent = player.nickname;
+          playerList.appendChild(li);
+        });
+
+        const chatLog = document.getElementById('chatLog');
+        chatLog.innerHTML = '';
+        (data.messages || []).forEach(msg => {
+          const p = document.createElement('p');
+          p.textContent = `${msg.nickname}: ${msg.content}`;
+          chatLog.appendChild(p);
+        });
+
+        if (data.messages.length > lastMessageCount) {
+          const audio = new Audio('ding.wav');
+          audio.play();
+          lastMessageCount = data.messages.length;
+          chatLog.scrollTop = chatLog.scrollHeight;
+        }
+
+        const visibleCharacters = document.getElementById('visibleCharacters');
+        visibleCharacters.innerHTML = '';
+        (data.visiblePlayers || []).forEach(player => {
+          const li = document.createElement('li');
+          li.textContent = `${player.nickname}: ${player.person}`;
+          visibleCharacters.appendChild(li);
+        });
+
+        document.getElementById('currentTurn').textContent = `현재 턴: ${data.currentTurn || '알 수 없음'}`;
+        const currentTurnPlayer = (data.players || [])[data.currentTurnIndex];
+        document.getElementById('askQuestion').disabled = !(currentTurnPlayer && currentTurnPlayer.id === playerId);
+
+        if (data.gameStarted && document.getElementById('waitingRoom').style.display !== 'none') {
+          startGame(data.visiblePlayers);
+        }
+      } catch (error) {
+        console.error("Error in updateRoomStatus:", error);
+      }
+    }
+
+    document.getElementById('nickname').addEventListener('input', () => {
+      const nickname = document.getElementById('nickname').value.trim();
+      const buttonsEnabled = nickname.length > 0;
+      document.getElementById('createRoom').disabled = !buttonsEnabled;
+      document.getElementById('joinRoom').disabled = !buttonsEnabled;
+    });
+
+    document.getElementById('createRoom').onclick = async () => {
+      const nickname = document.getElementById('nickname').value;
+      if (!nickname.trim()) return;
+      const response = await fetch('/createRoom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await response.json();
+      roomId = data.roomId;
+      isRoomCreator = true;
+      document.getElementById('displayRoomId').textContent = roomId;
+      await joinRoom(roomId, nickname);
+    };
+
+    document.getElementById('joinRoom').onclick = async () => {
+      const nickname = document.getElementById('nickname').value;
+      if (!nickname.trim()) return;
+      roomId = document.getElementById('roomId').value;
+      document.getElementById('displayRoomId').textContent = roomId;
+      await joinRoom(roomId, nickname);
+    };
+
+    async function joinRoom(roomId, nickname) {
+      const response = await fetch('/joinRoom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId, nickname }),
+      });
+      const data = await response.json();
+      playerId = data.playerId;
+
+      document.getElementById('setup').style.display = 'none';
+      document.getElementById('waitingRoom').style.display = 'block';
+
+      if (isRoomCreator) {
+        document.getElementById('startGame').style.display = 'block';
+      }
+
+      if (data.gameStarted) {
+        startGame(data.visiblePlayers);
+      } else {
+        statusInterval = setInterval(updateRoomStatus, 1000);
+      }
+    }
+
+    document.getElementById('startGame').onclick = async () => {
+      const response = await fetch('/startGame', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId }),
+      });
+      const data = await response.json();
+      if (data.gameStarted) {
+        startGame(data.visiblePlayers);
+      }
+    };
+
+    function startGame(visiblePlayers) {
+      clearInterval(statusInterval);
+      document.getElementById('waitingRoom').style.display = 'none';
+      document.getElementById('gameArea').style.display = 'block';
+
+
+      updateRoomStatus();
+    }
+
+    document.getElementById('askQuestion').onclick = async () => {
+      const question = document.getElementById('questionInput').value;
+      await fetch('/askQuestion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId, playerId, question }),
+      });
+      document.getElementById('questionInput').value = '';
+    };
+
+    document.getElementById('sendAnswer').onclick = async () => {
+      const answer = document.getElementById('answerInput').value;
+      await fetch('/sendAnswer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId, playerId, answer }),
+      });
+      document.getElementById('answerInput').value = '';
+    };
+
+    document.getElementById('attemptAnswer').onclick = async () => {
+      const guess = document.getElementById('guessInput').value;
+      const response = await fetch('/attemptAnswer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId, playerId, guess }),
+      });
+      const data = await response.json();
+      document.getElementById('guessInput').value = '';
+    
+      if (data.winner) {
+        alert(`${data.winnerNickname}님이 승리하셨습니다!`);
+        console.log("Winner found, reloading page.");
+        window.location.reload(true); 
+      } else if (data.incorrect) {
+        alert(data.message);
+      }
+    };
+    
+
+    document.getElementById('passTurn').onclick = async () => {
+      await fetch('/passTurn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId, playerId }),
+      });
+    };
+
+    statusInterval = setInterval(updateRoomStatus, 1000);
+  </script>
+</body>
+</html>
