@@ -1,28 +1,20 @@
-// server.js
+// npm install express http-proxy
 const express = require('express');
-const cors = require('cors');
+const { createProxyMiddleware } = require('http-proxy-middleware');
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(express.json());
+/* 172.20.x.x 는 외부에 안 보이므로
+   ① 로컬 박스에서만 실행하거나
+   ② 터널/포트포워딩으로 접근 가능하게 만든 뒤
+   createProxyMiddleware 로 그대로 릴레이 */
+app.use('/video', createProxyMiddleware({
+  target: 'http://172.20.50.20:8080',   // 카메라 MJPEG 원본
+  changeOrigin: true,
+  pathRewrite: { '^/video': '/video' }, // 필요 시 수정
+  ws: false
+}));
 
-let queue = [];
-
-app.post('/receive', (req, res) => {
-  const { sentence } = req.body;
-  if (!sentence) return res.status(400).json({ status:'error', message:'No sentence provided' });
-  console.log('[RECEIVE]', sentence);
-  queue.push(sentence);
-  return res.json({ status:'ok' });
-});
-
-app.get('/request', (req, res) => {
-  // 쌓인 문장들을 한 번에 반환하고 큐는 비웁니다
-  const messages = queue.slice();
-  queue = [];
-  console.log('[REQUEST] sending', messages.length, 'items');
-  return res.json({ sentences: messages });
-});
-
-const PORT = process.env.PORT || 8000;
-app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`🚀 MJPEG proxy on :${PORT}/video`)
+);
